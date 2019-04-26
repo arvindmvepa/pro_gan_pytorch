@@ -1049,7 +1049,7 @@ class ConditionalProGAN:
                                                        labels, current_depth, alpha)
 
                     # provide a loss feedback
-                    if i % int(total_batches / feedback_factor) == 0 or i == 1:
+                    if i % (total_batches / feedback_factor) == 0 or i == 1:
                         elapsed = time.time() - global_time
                         elapsed = str(datetime.timedelta(seconds=elapsed))
                         print("Elapsed: [%s]  batch: %d  d_loss: %f  g_loss: %f"
