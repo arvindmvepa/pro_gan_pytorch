@@ -47,32 +47,31 @@ class Generator(th.nn.Module):
         # create a module list of the other required general convolution blocks
         self.layers = ModuleList([])  # initialize to empty list
 
-        # create the ToRGB layers for various outputs:
+        # create the ToGRAY layers for various outputs:
         if self.use_eql:
             from pro_gan_pytorch.CustomLayers import _equalized_conv2d
-            self.toRGB = lambda in_channels: \
-                _equalized_conv2d(in_channels, 3, (1, 1), bias=True)
+            self.toGRAY = lambda in_channels: _equalized_conv2d(in_channels, 1, (1, 1), bias=True)
         else:
             from torch.nn import Conv2d
-            self.toRGB = lambda in_channels: Conv2d(in_channels, 3, (1, 1), bias=True)
+            self.toGRAY = lambda in_channels: Conv2d(in_channels, 1, (1, 1), bias=True)
 
-        self.rgb_converters = ModuleList([self.toRGB(self.latent_size)])
+        self.gray_converters = ModuleList([self.toGRAY(self.latent_size)])
 
         # create the remaining layers
         for i in range(self.depth - 1):
             if i <= 2:
                 layer = GenGeneralConvBlock(self.latent_size,
                                             self.latent_size, use_eql=self.use_eql)
-                rgb = self.toRGB(self.latent_size)
+                gray = self.toGRAY(self.latent_size)
             else:
                 layer = GenGeneralConvBlock(
                     int(self.latent_size // np.power(2, i - 3)),
                     int(self.latent_size // np.power(2, i - 2)),
                     use_eql=self.use_eql
                 )
-                rgb = self.toRGB(int(self.latent_size // np.power(2, i - 2)))
+                gray = self.toGRAY(int(self.latent_size // np.power(2, i - 2)))
             self.layers.append(layer)
-            self.rgb_converters.append(rgb)
+            self.gray_converters.append(gray)
 
         # register the temporary upsampler
         self.temporaryUpsampler = lambda x: interpolate(x, scale_factor=2)
@@ -94,13 +93,13 @@ class Generator(th.nn.Module):
             for block in self.layers[:depth - 1]:
                 y = block(y)
 
-            residual = self.rgb_converters[depth - 1](self.temporaryUpsampler(y))
-            straight = self.rgb_converters[depth](self.layers[depth - 1](y))
+            residual = self.gray_converters[depth - 1](self.temporaryUpsampler(y))
+            straight = self.gray_converters[depth](self.layers[depth - 1](y))
 
             out = (alpha * straight) + ((1 - alpha) * residual)
 
         else:
-            out = self.rgb_converters[0](y)
+            out = self.gray_converters[0](y)
 
         return out
 
@@ -142,16 +141,16 @@ class Discriminator(th.nn.Module):
         # create a module list of the other required general convolution blocks
         self.layers = ModuleList([])  # initialize to empty list
 
-        # create the fromRGB layers for various inputs:
+        # create the fromGRAY layers for various inputs:
         if self.use_eql:
             from pro_gan_pytorch.CustomLayers import _equalized_conv2d
-            self.fromRGB = lambda out_channels: \
-                _equalized_conv2d(3, out_channels, (1, 1), bias=True)
+            self.fromGRAY = lambda out_channels: \
+                _equalized_conv2d(1, out_channels, (1, 1), bias=True)
         else:
             from torch.nn import Conv2d
-            self.fromRGB = lambda out_channels: Conv2d(3, out_channels, (1, 1), bias=True)
+            self.fromGRAY = lambda out_channels: Conv2d(1, out_channels, (1, 1), bias=True)
 
-        self.rgb_to_features = ModuleList([self.fromRGB(self.feature_size)])
+        self.gray_to_features = ModuleList([self.fromGRAY(self.feature_size)])
 
         # create the remaining layers
         for i in range(self.height - 1):
@@ -161,14 +160,14 @@ class Discriminator(th.nn.Module):
                     int(self.feature_size // np.power(2, i - 3)),
                     use_eql=self.use_eql
                 )
-                rgb = self.fromRGB(int(self.feature_size // np.power(2, i - 2)))
+                gray = self.fromGRAY(int(self.feature_size // np.power(2, i - 2)))
             else:
                 layer = DisGeneralConvBlock(self.feature_size,
                                             self.feature_size, use_eql=self.use_eql)
-                rgb = self.fromRGB(self.feature_size)
+                gray = self.fromGRAY(self.feature_size)
 
             self.layers.append(layer)
-            self.rgb_to_features.append(rgb)
+            self.gray_to_features.append(gray)
 
         # register the temporary downSampler
         self.temporaryDownsampler = AvgPool2d(2)
@@ -185,10 +184,10 @@ class Discriminator(th.nn.Module):
         assert height < self.height, "Requested output depth cannot be produced"
 
         if height > 0:
-            residual = self.rgb_to_features[height - 1](self.temporaryDownsampler(x))
+            residual = self.gray_to_features[height - 1](self.temporaryDownsampler(x))
 
             straight = self.layers[height - 1](
-                self.rgb_to_features[height](x)
+                self.gray_to_features[height](x)
             )
 
             y = (alpha * straight) + ((1 - alpha) * residual)
@@ -196,7 +195,7 @@ class Discriminator(th.nn.Module):
             for block in reversed(self.layers[:height - 1]):
                 y = block(y)
         else:
-            y = self.rgb_to_features[0](x)
+            y = self.gray_to_features[0](x)
 
         out = self.final_block(y)
 
@@ -244,16 +243,16 @@ class ConditionalDiscriminator(th.nn.Module):
         # create a module list of the other required general convolution blocks
         self.layers = ModuleList([])  # initialize to empty list
 
-        # create the fromRGB layers for various inputs:
+        # create the fromGRAY layers for various inputs:
         if self.use_eql:
             from pro_gan_pytorch.CustomLayers import _equalized_conv2d
-            self.fromRGB = lambda out_channels: \
+            self.fromGRAY = lambda out_channels: \
                 _equalized_conv2d(3, out_channels, (1, 1), bias=True)
         else:
             from torch.nn import Conv2d
-            self.fromRGB = lambda out_channels: Conv2d(3, out_channels, (1, 1), bias=True)
+            self.fromGRAY = lambda out_channels: Conv2d(3, out_channels, (1, 1), bias=True)
 
-        self.rgb_to_features = ModuleList([self.fromRGB(self.feature_size)])
+        self.gray_to_features = ModuleList([self.fromGRAY(self.feature_size)])
 
         # create the remaining layers
         for i in range(self.height - 1):
@@ -263,14 +262,14 @@ class ConditionalDiscriminator(th.nn.Module):
                     int(self.feature_size // np.power(2, i - 3)),
                     use_eql=self.use_eql
                 )
-                rgb = self.fromRGB(int(self.feature_size // np.power(2, i - 2)))
+                gray = self.fromGRAY(int(self.feature_size // np.power(2, i - 2)))
             else:
                 layer = DisGeneralConvBlock(self.feature_size,
                                             self.feature_size, use_eql=self.use_eql)
-                rgb = self.fromRGB(self.feature_size)
+                gray = self.fromGRAY(self.feature_size)
 
             self.layers.append(layer)
-            self.rgb_to_features.append(rgb)
+            self.gray_to_features.append(gray)
 
         # register the temporary downSampler
         self.temporaryDownsampler = AvgPool2d(2)
@@ -289,10 +288,10 @@ class ConditionalDiscriminator(th.nn.Module):
         assert height < self.height, "Requested output depth cannot be produced"
 
         if height > 0:
-            residual = self.rgb_to_features[height - 1](self.temporaryDownsampler(x))
+            residual = self.gray_to_features[height - 1](self.temporaryDownsampler(x))
 
             straight = self.layers[height - 1](
-                self.rgb_to_features[height](x)
+                self.gray_to_features[height](x)
             )
 
             y = (alpha * straight) + ((1 - alpha) * residual)
@@ -300,7 +299,7 @@ class ConditionalDiscriminator(th.nn.Module):
             for block in reversed(self.layers[:height - 1]):
                 y = block(y)
         else:
-            y = self.rgb_to_features[0](x)
+            y = self.gray_to_features[0](x)
 
         out = self.final_block(y, labels)
 
