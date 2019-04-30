@@ -1013,6 +1013,9 @@ class ConditionalProGAN:
 
             data = get_data_loader(dataset, batch_sizes[current_depth], num_workers)
             ticker = 1
+            print("epochs (within code): {}".format(epochs))
+            import sys
+            sys.stdout.flush()
 
             for epoch in range(1, epochs[current_depth] + 1):
                 start = timeit.default_timer()  # record time at the start of epoch
