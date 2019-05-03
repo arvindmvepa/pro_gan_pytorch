@@ -247,10 +247,10 @@ class ConditionalDiscriminator(th.nn.Module):
         if self.use_eql:
             from pro_gan_pytorch.CustomLayers import _equalized_conv2d
             self.fromGRAY = lambda out_channels: \
-                _equalized_conv2d(3, out_channels, (1, 1), bias=True)
+                _equalized_conv2d(1, out_channels, (1, 1), bias=True)
         else:
             from torch.nn import Conv2d
-            self.fromGRAY = lambda out_channels: Conv2d(3, out_channels, (1, 1), bias=True)
+            self.fromGRAY = lambda out_channels: Conv2d(1, out_channels, (1, 1), bias=True)
 
         self.gray_to_features = ModuleList([self.fromGRAY(self.feature_size)])
 
