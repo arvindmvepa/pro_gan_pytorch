@@ -992,7 +992,7 @@ class ConditionalProGAN:
         global_time = time.time()
 
         # create fixed_input for debugging
-        temp_data_loader = get_data_loader(dataset, batch_sizes[0], num_workers=3)
+        temp_data_loader = get_data_loader(dataset, batch_sizes[0], num_workers=num_workers)
         _, fx_labels = next(iter(temp_data_loader))
         # reshape them properly
         fixed_labels = self.one_hot_encode(fx_labels.view(-1, 1)).to(self.device)
