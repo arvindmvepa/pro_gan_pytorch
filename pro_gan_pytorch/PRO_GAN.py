@@ -8,6 +8,7 @@ import timeit
 import copy
 import numpy as np
 import torch as th
+import sys
 
 
 # ========================================================================================
@@ -1090,6 +1091,8 @@ class ConditionalProGAN:
                     # increment the alpha ticker and the step
                     ticker += 1
                     step += 1
+
+                    sys.stdout.flush()
 
                 stop = timeit.default_timer()
                 print("Time taken for epoch: %.3f secs" % (stop - start))
