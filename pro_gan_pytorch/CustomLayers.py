@@ -420,8 +420,9 @@ class ConDisFinalBlock(th.nn.Module):
 
         # we also need an embedding matrix for the label vectors
         self.label_embedder = Embedding(num_classes, in_channels)
-        #norms = th.norm(self.label_embedder.weight, p=2, dim=1).data
-        #self.label_embedder.weight.data = self.label_embedder.weight.data.div(norms.view(num_classes,1).expand_as(self.label_embedder.weight))
+        norms = th.norm(self.label_embedder.weight, p=2, dim=1).data
+        self.norms = th.norm(self.label_embedder.weight, p=2, dim=1).data
+        self.label_embedder.weight.data = self.label_embedder.weight.data.div(norms.view(num_classes,1).expand_as(self.label_embedder.weight))
         # leaky_relu:
         self.lrelu = LeakyReLU(0.2)
 
