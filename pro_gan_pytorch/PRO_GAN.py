@@ -305,7 +305,8 @@ class ConditionalDiscriminator(th.nn.Module):
         out = self.final_block(y, labels)
 
         print("label embedder: {}".format(self.final_block.label_embedder.weight.data))
-        print("label embedder norm: {}".format(self.final_block.norms))
+        print("label embedder actual norm: {}".format(self.final_block.norms))
+        print("label embedder calculated norm: {}".format(th.norm(self.final_block.label_embedder.weight, p=2, dim=1).data))
 
         return out
 
